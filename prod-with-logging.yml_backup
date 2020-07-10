@@ -1,0 +1,59 @@
+version: "3.7"
+services:
+
+        proxy:
+                image: vanger69/proxy:1.0
+                networks:
+                        - identidock_net
+                ports:
+                        - "9000:80"
+                environment:
+                        - NGINX_HOST=52.174.123.33
+                        - NGINX_PROXY=http://identidock:9090
+
+        identidock:
+                image: vanger69/identidock:auto
+                networks:
+                        - identidock_net
+                        - identidock_back
+                environment:
+                        ENV: PROD
+
+        dnmonster:
+                image: amouat/dnmonster
+                networks:
+                        - identidock_back
+
+        redis:
+                image: redis:latest
+                networks:
+                        - identidock_back
+
+        logstash:
+                image: logstash:5
+                volumes:
+                        - ${PWD}/logstash.yml:/etc/logstash.yml
+                networks:
+                        - identidock_back
+                ports:
+                        - "5000:5000/udp"
+                environment:
+                        LOGSPOUT: ignore
+                command: -f /etc/logstash.yml
+
+        logspout:
+                image: bekt/logspout-logstash
+                depends_on:
+                        - logstash
+                volumes:
+                        - /var/run/docker.sock:/var/run/docker.sock
+                ports:
+                        - "8000:80"
+                networks:
+                        - identidock_back
+                environment:
+                        ROUTE_URIS: logstash://172.18.0.2:5000
+                          
+networks:
+        identidock_net:
+        identidock_back:

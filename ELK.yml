@@ -1,0 +1,18 @@
+version: '3.3'
+services:
+  logspout:
+      image: gliderlabs/logspout:v3
+      command: 'udp://logstash:5000'
+      links:
+        - logstash
+      volumes:
+        - '/var/run/docker.sock:/tmp/docker.sock'
+      depends_on:
+         - logstash
+
+  logstash:
+      image: logstash:2.1.1
+      environment:
+        - STDOUT=true
+        - LOGSPOUT=ignore
+      command: 'logstash -e "input { udp { port => 5000 } } output { stdout { codec => rubydebug } }"'

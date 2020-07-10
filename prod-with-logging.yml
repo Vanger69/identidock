@@ -1,0 +1,83 @@
+version: "3.7"
+services:
+
+        proxy:
+                image: vanger69/proxy:1.0
+                networks:
+                        - identidock_net
+                ports:
+                        - "9000:80"
+                environment:
+                        - NGINX_HOST=52.174.123.33
+                        - NGINX_PROXY=http://identidock:9090
+
+        identidock:
+                image: vanger69/identidock:auto
+                networks:
+                        - identidock_net
+                        - identidock_back
+                environment:
+                        - ENV=PROD
+
+        dnmonster:
+                image: amouat/dnmonster
+                networks:
+                        - identidock_back
+
+        redis:
+                image: redis:latest
+                networks:
+                        - identidock_back
+
+                          #        logspout:
+                          #                #                image: gliderlabs/logspout:v3
+                          #                image: amouat/logspout-logstash
+                          #                command: 'logstash://logstash:5000'
+                          #                networks:
+                          #                        - identidock_back
+                          #                volumes:
+                          #                        - '/var/run/docker.sock:/tmp/docker.sock'
+                          #                depends_on:
+                          #                        - logstash
+                          #                ports:
+                          #                        - "8000:90"
+#
+        logstash:  
+                image: logstash:7.6.2
+                networks:
+                        - identidock_back
+                environment:
+#                       - STDOUT=true
+                        - LOGSPOUT=ignore
+                ports:
+                        - "5000:5000/udp"
+                        - "5544:5544"
+                volumes:
+                        - ~/identidock/logstash.conf:/etc/logstash.conf
+                command: 'logstash -f /etc/logstash.conf'
+                #                command: 'logstash -e "input { udp { port => 5000 } } output { stdout { codec => rubydebug } }"'
+
+        elasticsearch:
+                image: elasticsearch:7.6.2
+                environment:
+                        - LOGSPOUT=ignore
+                        - xpack.security.enabled=false
+                        - discovery.type=single-node 
+                networks:
+                        - identidock_back
+                          #                command: 'sysctl -w vm.max_map_count=262144'
+
+
+        kibana:
+                image: kibana:7.6.2
+                environment:
+                        - LOGSPOUT=ignore
+                        - ELASTICSEARCH_URL=http://elasticsearch:9200
+                networks:
+                        - identidock_back
+                ports:
+                        - "5601:5601"
+        
+networks:
+        identidock_net:
+        identidock_back:
